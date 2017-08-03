@@ -87,13 +87,24 @@ def XYZ_2_spher(x , y , z):
     This function converts an array of points in the cartesian coordinate system to the spherical coordinate system
     
     Inputs:
-        x = An array of x coordinate of the points 
-        y = An array of y coordinate of the points 
-        z = An array of z coordinate of the points 
+        x = A mesh grid of x coordinate of the points 
+        y = A mesh grid of y coordinate of the points 
+        z = A mesh grid of z coordinate of the points 
     
     Outputs:
         r = Distance to the origin  
         theta = Elevation angle
         phi = Azimuth angle
     '''
+    r = np.zeros(x.shape)
+    theta = np.zeros(x.shape)
+    phi = np.zeros(x.shape)
 
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+
+            r[i,j]=math.sqrt(x[i,j]**2 + y[i,j]**2 + z[i,j]**2)
+            theta[i,j] = math.acos(z[i,j]/r[i,j])
+            phi[i,j]=math.atan2(y[i,j],x[i,j])
+
+    return r , theta , phi
