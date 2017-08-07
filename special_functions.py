@@ -108,3 +108,75 @@ def XYZ_2_spher(x , y , z):
             phi[i,j]=math.atan2(y[i,j],x[i,j])
 
     return r , theta , phi
+
+def calc_Rn(N, kr):
+    '''
+    This function calculates Rn = -ikr * e^(ikr) * i^(-n) * hn(kr) , where hn is the nth order spherical Hankel 
+    function of the second kind
+    
+    Inputs:
+        N = maximum order
+        kr = product of the wavenumber and the radius of the cylindrical speaker array 
+    
+    Outputs:
+        Rn_diag = a diagonal matrix that contains R0 , R1 ..... RN
+    '''
+
+    hn = np.zeros((N+1,)) + 0j
+    Rn = np.zeros((N+1,)) + 0j
+
+    for n in range(N+1):
+        # Because the real and imaginary parts of hn are the spherical Bessel function of the first and the second
+        # kinds respectively
+        hn_re = special.spherical_jn(n , kr , derivative=False)
+        hn_im = special.spherical_yn(n , kr , derivative=False)
+        hn[n] = hn_re - 1j*hn_im
+
+        Rn[n] = -1j*kr*(math.e**(1j*kr))*(1j**(-n))*hn[n]
+
+    Rn_diag = np.diag(Rn)
+
+    return Rn_diag
+
+
+def truncate_solve(L , N_speaker , P , b):
+
+    '''
+    For a linear system of equations Pa = b, this function truncates the tall P matrix (N_speaker x L) to become a 
+    square matrix in order to solve it directly. This gives a better matching to the lower order harmonics, 
+    which possess most of the energy.
+    
+    Inputs:
+        L = number of speakers 
+        N_speaker = the order of the reproduction system
+        P = P matrix  
+        b = b matrix
+        
+    Outputs:
+        a = a matrix (loudspeaker weights)
+    '''
+
+    a = np.empty((L,))
+
+    return a
+
+
+def min_a_solve(L , N_speaker , P , b):
+
+    '''
+        For a linear system of equations Pa = b with fat P matrix, this function find the solution to a that also 
+        satisfies that || a ||^2 is the minimum
+
+        Inputs:
+            L = number of speakers 
+            N_speaker = the order of the reproduction system
+            P = P matrix  
+            b = b matrix
+
+        Outputs:
+            a = a matrix (loudspeaker weights)
+    '''
+
+    a = np.empty((L,))
+
+    return a
