@@ -109,6 +109,35 @@ def XYZ_2_spher(x , y , z):
 
     return r , theta , phi
 
+
+def Spher_2_XYZ(r, theta, phi):
+    '''
+    This function converts an array of points in the spherical coordinate system to the cartesian coordinate system
+
+    Inputs:
+        r = A mesh grid of r coordinate of the points 
+        theta = A mesh grid of elevation angles of the points 
+        phi = A mesh grid of azimuth angles of the points 
+
+    Outputs:
+        x = x coordinate  
+        y = y coordinate
+        z = z coordinate
+    '''
+
+    x = np.zeros(r.shape)
+    y = np.zeros(r.shape)
+    z = np.zeros(r.shape)
+
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            x[i, j] = r[i,j]*math.sin(theta[i,j])*math.cos(phi[i,j])
+            y[i, j] = r[i,j]*math.sin(theta[i,j])*math.sin(phi[i,j])
+            z[i, j] = r[i,j]*math.cos(theta[i,j])
+
+    return x, y, z
+
+
 def calc_Rn(N, kr):
     '''
     This function calculates Rn = -ikr * e^(ikr) * i^(-n) * hn(kr) , where hn is the nth order spherical Hankel 
@@ -139,11 +168,11 @@ def calc_Rn(N, kr):
     return Rn_diag
 
 
-def truncate_solve(L , N_speaker , P , b):
+def truncate_solve(P, b):
 
     '''
-    For a linear system of equations Pa = b, this function truncates the tall P matrix (N_speaker x L) to become a 
-    square matrix in order to solve it directly. This gives a better matching to the lower order harmonics, 
+    For a linear system of equations Pa = b, this function truncates the tall P matrix (L < K = (N_speaker + 1)^2 ) to 
+    become a square matrix in order to solve it directly. This gives a better matching to the lower order harmonics, 
     which possess most of the energy.
     
     Inputs:
@@ -156,16 +185,69 @@ def truncate_solve(L , N_speaker , P , b):
         a = a matrix (loudspeaker weights)
     '''
 
-    a = np.empty((L,))
+    P_trunc = P[0:P.shape[1] , 0:P.shape[1]]
+    b_trunc = b[0:P.shape[1] , 0:1]
+
+    # Keep track of the condition number of the inverted matrix
+    # eig_val, _ = np.linalg.eig(P_trunc)
+    # print((eig_val))
+    # cond_num = abs(eig_val[np.argmax(abs(eig_val))] / eig_val[np.argmin(abs(eig_val))])
+    # print("The condition number for the inverted matrix is : %.6f" % (cond_num))
+    #
+    # if (abs(cond_num) < 100):
+    #     P_inv = np.linalg.inv(P_trunc)
+    # else:
+    #     reg = 0.1
+    #     P_inv = np.linalg.inv(P_trunc + reg*np.identity(len(eig_val)))
+    P_inv = np.linalg.inv(P_trunc)
+
+    a = np.dot(P_inv, b_trunc)
 
     return a
 
 
-def min_a_solve(L , N_speaker , P , b):
+def LS_solve(L, N_speaker, P, b):
+    '''
+        For a linear system of equations Pa = b, this function calculates the LS solution for the tall P matrix 
+        (L < K = (N_speaker + 1)^2 )
+
+        Inputs:
+            L = number of speakers 
+            N_speaker = the order of the reproduction system
+            P = P matrix  
+            b = b matrix
+
+        Outputs:
+            a = a matrix (loudspeaker weights)
+        '''
+
+    P_star = np.conj(np.transpose(P))
+
+    # Keep track of the condition number of the inverted matrix
+    eig_val, _ = np.linalg.eig(np.dot(P_star, P))
+    print(eig_val)
+    # cond_num = eig_val[0] / eig_val[len(eig_val) - 1]
+    # print("The condition number for the inverted matrix is : %.6f" % (cond_num))
+    #
+    # if (abs(cond_num) < 100):
+    #     P_nm = np.dot(P_star, np.linalg.inv(np.dot(P, P_star)))
+    # else:
+    #     reg = 0.1
+    #     P_nm = np.dot(P_star, np.linalg.inv(np.dot(P, P_star) + reg * np.identity(len(eig_val))))  # diagonal loading
+    P_nm = np.dot(np.linalg.inv(np.dot(P_star, P)),P_star)
+
+    a = np.dot(P_nm, b)
+
+    return a
+
+
+
+
+def min_a_solve(P , b):
 
     '''
-        For a linear system of equations Pa = b with fat P matrix, this function find the solution to a that also 
-        satisfies that || a ||^2 is the minimum
+        For a linear system of equations Pa = b with fat P matrix (L > K = (N_speaker + 1)^2 ), this function find 
+        the solution to a that also satisfies that || a ||^2 is the minimum
 
         Inputs:
             L = number of speakers 
@@ -177,6 +259,49 @@ def min_a_solve(L , N_speaker , P , b):
             a = a matrix (loudspeaker weights)
     '''
 
-    a = np.empty((L,))
+    P_star = np.conj(np.transpose(P))
+
+    # Keep track of the condition number of the inverted matrix
+    eig_val, _ = np.linalg.eig(np.dot(P, P_star))
+    print(eig_val)
+    cond_num = eig_val[0] / eig_val[len(eig_val) - 1]
+    print("The condition number for the inverted matrix is : %.6f" % (cond_num))
+
+    if(abs(cond_num) < 100):
+        P_nm = np.dot(P_star, np.linalg.inv(np.dot(P,P_star)))
+    else:
+        reg = 0.1
+        P_nm = np.dot(P_star, np.linalg.inv(np.dot(P, P_star) + reg*np.identity(len(eig_val)))) #diagonal loading
+
+    a = np.dot(P_nm, b)
+
+    print(a)
+
+    print(np.dot(P , a))
+    print(b)
 
     return a
+
+
+def column_sum(x):
+    '''
+    When given a matrix x of size M x N, this function sums up the elements column by column and returns an array x_sum 
+    of size 1 x N
+    
+    Inputs:
+        x = given matrix
+    
+    Outputs:
+        x_sum = resulting matrix that has column sums
+    '''
+
+    x_sum = np.empty((1,x.shape[1])) + 0j
+    for j in range(x.shape[1]):
+        x_sum[0,j] = np.sum(x[:,j])
+
+    return x_sum
+
+# test = np.arange(15,0,-1).reshape(5,3)
+# testb = np.arange(3).reshape(3,1)
+#
+# truncate_solve(test,testb)
