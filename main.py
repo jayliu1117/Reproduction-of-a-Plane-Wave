@@ -6,6 +6,7 @@ from scipy import special
 
 # Flag for different operations: 1 = calculate/show only the desired sound field
 #                                2 = calculate/show only the speakers sound field
+#                                3 = calculate/show for both the desired sound field and the speakers sound field                               
 flag = 3
 
 # Variables and constants
