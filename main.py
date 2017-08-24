@@ -6,21 +6,21 @@ from scipy import special
 
 # Flag for different operations: 1 = calculate/show only the desired sound field
 #                                2 = calculate/show only the speakers sound field
-#                                3 = calculate/show for both the desired sound field and the speakers sound field                               
+#                                3 = calculate/show for both the desired sound field and the speakers sound field
 flag = 3
 
 # Variables and constants
 c = 340 # speed of sound in m/s  (assuming it's constant)
-f = 300 # frequency of the narrow-band plane-wave in Hz
+f = 900 # frequency of the narrow-band plane-wave in Hz
 k = 2*math.pi*f/c # wave number
-x0 = 0.5 # radius of our reproduction sphere in meters
+x0 = 0.2 # radius of our reproduction sphere in meters
 Theta = math.pi/2 # Elevation angle of the incoming plane wave
-Phi = math.pi/3 # Azimuth angle of the incoming plane wave
+Phi = math.pi/6 # Azimuth angle of the incoming plane wave
 
 # Set up variables for the sound field plot
 z = x0 / 2  # The height of the plane of interest
-x_range = 2  # Half of the width of our x axis on the plot
-y_range = 2  # Half of the width of our y axis on the plot
+x_range = 2*x0  # Half of the width of our x axis on the plot
+y_range = 2*x0  # Half of the width of our y axis on the plot
 
 num_increm = 50  # Number of increments for our variables
 
@@ -70,15 +70,15 @@ def desired_sound_field():
 
             Xn_re, Xn_im = sf.calc_Xn(N, k * r[i,j])
             Xn = Xn_re + 1j * Xn_im
-            des_sound_field[i,j] = np.dot(np.dot(first, middle_pos), Xn) + np.dot(np.dot(first, middle_neg), Xn)
+            des_sound_field[i,j] = 4*math.pi*(np.dot(np.dot(first, middle_pos), Xn) + np.dot(np.dot(first, middle_neg), Xn))
 
     # Plotting out the desired sound field
     plt.figure()
-    plt.imshow(des_sound_field.real, extent=(X[0], X[len(X)-1], Y[len(Y)-1], Y[0]) )
+    plt.imshow(des_sound_field.real, extent=(X[0], X[len(X)-1], Y[len(Y)-1], Y[0]), vmin=-1, vmax=1)
     plt.plot(circle_x,circle_y,'k')
     plt.xlabel("X (m)")
     plt.ylabel("Y (m)")
-    plt.title("Sound Field Simulation - Desired Sound Field")
+    plt.title("Sound Field Simulation - Desired Sound Field with order N = %i" % N)
     plt.colorbar()
     if flag == 3:
         return 0
@@ -91,11 +91,11 @@ def desired_sound_field():
 def speakers_sound_field():
     # For calculating the sound field produce by L speakers in a spherical array
     # Constants and variables
-    rad = x0 # radius of the spherical array
+    rad = x0*5 # radius of the spherical array
     kr = k*rad
     N_speaker = int(math.ceil(k*x0)) # order of the speaker reproduction system
     print('The order of the speaker is  %i' % (N_speaker))
-    L = 4 # number of speakers
+    L = 25 # number of speakers
     theta_speaker = np.ones((L,)) * (math.pi/2)  # Elevation angles for the speakers
     phi_speaker = np.arange(L) * (2*math.pi/L)   # Azimuth angels for the speakers
 
@@ -134,16 +134,24 @@ def speakers_sound_field():
 
 
     # Now solve for the weights a
-    if(L < (N_speaker+1)**2):
-        a = sf.truncate_solve(P, b)
+    if(L <= (N_speaker+1)**2):
+        # a = sf.truncate_solve(P, b)
+        a = sf.LS_solve(P, b)
+        # Pinv = np.linalg.pinv(P)
+        # a = np.dot(Pinv, b)
     elif(L > (N_speaker+1)**2):
         a = sf.min_a_solve(P, b)
+        # Pinv = np.linalg.pinv(P)
+        # a = np.dot(Pinv, b)
 
-    print(a)
+
+    residual = b - np.dot(P,a)
+    print("residual=")
+    print(residual)
 
     # Now construct the sound field reproduced by our loudspeaker array
     # Write out the sound field equation in the matrix form Ysum x Rn x Xn
-    Ysum = np.zeros((1,N_speaker)) + 0j
+    Ysum = np.zeros((1,N_speaker+1)) + 0j
 
 
     # For the spherical harmonics of the loud speakers
@@ -164,6 +172,7 @@ def speakers_sound_field():
     # Now calculate for the overall sound field
     for i in range(r.shape[0]):
         for j in range(r.shape[1]):
+            Ysum *= 0
             Ynm_pos_re, Ynm_pos_im, Ynm_neg_re, Ynm_neg_im = sf.spher_harm(N_speaker, theta[i, j], phi[i, j])
             Ynm_x_pos = Ynm_pos_re + 1j * Ynm_pos_im
             Ynm_x_neg = Ynm_neg_re + 1j * Ynm_neg_im
@@ -174,16 +183,16 @@ def speakers_sound_field():
                 multi_sum_pos[l] = sf.column_sum(multi_pos)
                 multi_sum_neg[l] = sf.column_sum(multi_neg)
 
-                Ysum = a[l]*multi_sum_neg[l] + a[l]*multi_sum_pos[l]
+                Ysum += a[l]*multi_sum_neg[l] + a[l]*multi_sum_pos[l]
 
             Xn_re, Xn_im = sf.calc_Xn(N_speaker, k * r[i, j])
             Xn = Xn_re + 1j * Xn_im
 
-            actual_sound_field[i,j] = np.dot(np.dot(Ysum,Rn) , Xn)
+            actual_sound_field[i,j] = 4*math.pi*np.dot(np.dot(Ysum,Rn), Xn)
 
     # Plotting out the actual sound field
     plt.figure()
-    plt.imshow(actual_sound_field.real, extent=(X[0], X[len(X) - 1], Y[len(Y) - 1], Y[0]))
+    plt.imshow(actual_sound_field.real, extent=(X[0], X[len(X) - 1], Y[len(Y) - 1], Y[0]), vmin=-1, vmax=1)
     plt.plot(circle_x,circle_y,'k')
     plt.xlabel("X (m)")
     plt.ylabel("Y (m)")
