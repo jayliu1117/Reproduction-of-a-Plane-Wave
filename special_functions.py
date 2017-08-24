@@ -206,7 +206,7 @@ def truncate_solve(P, b):
     return a
 
 
-def LS_solve(L, N_speaker, P, b):
+def LS_solve(P, b):
     '''
         For a linear system of equations Pa = b, this function calculates the LS solution for the tall P matrix 
         (L < K = (N_speaker + 1)^2 )
@@ -234,7 +234,7 @@ def LS_solve(L, N_speaker, P, b):
     # else:
     #     reg = 0.1
     #     P_nm = np.dot(P_star, np.linalg.inv(np.dot(P, P_star) + reg * np.identity(len(eig_val))))  # diagonal loading
-    P_nm = np.dot(np.linalg.inv(np.dot(P_star, P)),P_star)
+    P_nm = np.dot(np.linalg.inv(np.dot(P_star, P)+ 1e-1*np.identity(P_star.shape[0])),P_star)
 
     a = np.dot(P_nm, b)
 
@@ -264,21 +264,24 @@ def min_a_solve(P , b):
     # Keep track of the condition number of the inverted matrix
     eig_val, _ = np.linalg.eig(np.dot(P, P_star))
     print(eig_val)
-    cond_num = eig_val[0] / eig_val[len(eig_val) - 1]
-    print("The condition number for the inverted matrix is : %.6f" % (cond_num))
+    # cond_num = eig_val[0] / eig_val[len(eig_val) - 1]
+    # print("The condition number for the inverted matrix is : %.6f" % (cond_num))
 
-    if(abs(cond_num) < 100):
-        P_nm = np.dot(P_star, np.linalg.inv(np.dot(P,P_star)))
-    else:
-        reg = 0.1
-        P_nm = np.dot(P_star, np.linalg.inv(np.dot(P, P_star) + reg*np.identity(len(eig_val)))) #diagonal loading
+    # if(abs(cond_num) < 100):
+    #     P_nm = np.dot(P_star, np.linalg.inv(np.dot(P,P_star)))
+    # else:
+    #     reg = 0.1
+    #     P_nm = np.dot(P_star, np.linalg.inv(np.dot(P, P_star) + reg*np.identity(len(eig_val)))) #diagonal loading
+
+    P_nm = np.dot(P_star, np.linalg.inv(np.dot(P,P_star)+ 1e-1*np.identity(P.shape[0])))
+
 
     a = np.dot(P_nm, b)
 
-    print(a)
-
-    print(np.dot(P , a))
-    print(b)
+    # print(a)
+    #
+    # print(np.dot(P , a))
+    # print(b)
 
     return a
 
