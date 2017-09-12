@@ -3,6 +3,8 @@ import math
 import special_functions as sf
 import matplotlib.pyplot as plt
 from scipy import special
+import matplotlib.cm as cm
+from matplotlib.colors import LogNorm
 
 # Flag for different operations: 1 = calculate/show only the desired sound field
 #                                2 = calculate/show only the speakers sound field
@@ -11,7 +13,7 @@ flag = 3
 
 # Variables and constants
 c = 340 # speed of sound in m/s  (assuming it's constant)
-f = 900 # frequency of the narrow-band plane-wave in Hz
+f = 1500 # frequency of the narrow-band plane-wave in Hz
 k = 2*math.pi*f/c # wave number
 x0 = 0.2 # radius of our reproduction sphere in meters
 Theta = math.pi/2 # Elevation angle of the incoming plane wave
@@ -81,11 +83,11 @@ def desired_sound_field():
     plt.title("Sound Field Simulation - Desired Sound Field with order N = %i" % N)
     plt.colorbar()
     if flag == 3:
-        return 0
+        return des_sound_field
     else:
         plt.show()
 
-    return 0
+    return des_sound_field
 
 
 def speakers_sound_field():
@@ -95,7 +97,8 @@ def speakers_sound_field():
     kr = k*rad
     N_speaker = int(math.ceil(k*x0)) # order of the speaker reproduction system
     print('The order of the speaker is  %i' % (N_speaker))
-    L = 25 # number of speakers
+    L = (N_speaker+1)**2 # number of speakers
+    print('%i speakers are used.' % (L))
     theta_speaker = np.ones((L,)) * (math.pi/2)  # Elevation angles for the speakers
     phi_speaker = np.arange(L) * (2*math.pi/L)   # Azimuth angels for the speakers
 
@@ -145,9 +148,9 @@ def speakers_sound_field():
         # a = np.dot(Pinv, b)
 
 
-    residual = b - np.dot(P,a)
-    print("residual=")
-    print(residual)
+    # residual = b - np.dot(P,a)
+    # print("residual=")
+    # print(residual)
 
     # Now construct the sound field reproduced by our loudspeaker array
     # Write out the sound field equation in the matrix form Ysum x Rn x Xn
@@ -198,18 +201,28 @@ def speakers_sound_field():
     plt.ylabel("Y (m)")
     plt.title("Sound Field Simulation - Actual Sound Field using %i speakers" % L)
     plt.colorbar()
-    plt.show()
-
-
 
     # print(P)
 
-    return 0
+    return actual_sound_field
+
 
 if(flag == 1):
-    desired_sound_field()
+    des = desired_sound_field()
 elif(flag == 2):
-    speakers_sound_field()
+    speak = speakers_sound_field()
 elif(flag == 3):
-    desired_sound_field()
-    speakers_sound_field()
+    des = desired_sound_field()
+    speak = speakers_sound_field()
+
+    denom = 0
+    nume = 0
+    for i in range(des.shape[0]):
+        for j in range(des.shape[1]):
+            if((X[j]**2+Y[i]**2) < (circle_x[0]**2 + circle_y[0]**2)):
+                denom += abs(des[i,j])**2
+                nume += abs(des[i,j] - speak[i,j])**2
+    error = nume / denom
+    print("The normalized reproduction error is: %f" % error)
+
+    plt.show()
