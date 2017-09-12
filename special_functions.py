@@ -55,6 +55,7 @@ def spher_harm(N , theta , phi):
                 Ynm_neg_re[abs(m) , n] = final.real * ((-1)**abs(m))
                 Ynm_neg_im[abs(m) , n] = -final.imag * ((-1)**abs(m))
 
+
     return Ynm_pos_re , Ynm_pos_im, Ynm_neg_re , Ynm_neg_im
 
 def calc_Xn(N , kx):
@@ -96,6 +97,7 @@ def XYZ_2_spher(x , y , z):
         theta = Elevation angle
         phi = Azimuth angle
     '''
+
     r = np.zeros(x.shape)
     theta = np.zeros(x.shape)
     phi = np.zeros(x.shape)
@@ -162,6 +164,7 @@ def calc_Rn(N, kr):
         hn[n] = hn_re - 1j*hn_im
 
         Rn[n] = -1j*kr*(math.e**(1j*kr))*(1j**(-n))*hn[n]
+        # Rn[n] = 1j*kr*(math.e**(1j*kr))*hn[n]
 
     Rn_diag = np.diag(Rn)
 
@@ -224,8 +227,8 @@ def LS_solve(P, b):
     P_star = np.conj(np.transpose(P))
 
     # Keep track of the condition number of the inverted matrix
-    eig_val, _ = np.linalg.eig(np.dot(P_star, P))
-    print(eig_val)
+    # eig_val, _ = np.linalg.eig(np.dot(P_star, P))
+    # print(eig_val)
     # cond_num = eig_val[0] / eig_val[len(eig_val) - 1]
     # print("The condition number for the inverted matrix is : %.6f" % (cond_num))
     #
@@ -262,8 +265,8 @@ def min_a_solve(P , b):
     P_star = np.conj(np.transpose(P))
 
     # Keep track of the condition number of the inverted matrix
-    eig_val, _ = np.linalg.eig(np.dot(P, P_star))
-    print(eig_val)
+    # eig_val, _ = np.linalg.eig(np.dot(P, P_star))
+    # print(eig_val)
     # cond_num = eig_val[0] / eig_val[len(eig_val) - 1]
     # print("The condition number for the inverted matrix is : %.6f" % (cond_num))
 
@@ -303,8 +306,3 @@ def column_sum(x):
         x_sum[0,j] = np.sum(x[:,j])
 
     return x_sum
-
-# test = np.arange(15,0,-1).reshape(5,3)
-# testb = np.arange(3).reshape(3,1)
-#
-# truncate_solve(test,testb)
